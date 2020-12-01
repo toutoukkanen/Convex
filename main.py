@@ -6,12 +6,10 @@ def vector_mult(x=[0] * 2, y=[0] * 2, z=[0] * 2):
     j = z[0] * x[1] - x[0] * z[1]
     k = x[0] * y[1] - y[0] * x[1]
 
-    print(i)
-    print(j)
-    print(k)
+    return i, j, k
 
 
-def make_xy_map(v: list):
+def make_xyz_map(v: list):
     x = []
     y = []
     z = []
@@ -29,11 +27,15 @@ def make_xy_map(v: list):
 v1 = (-0.1, 0.2, 0)
 v2 = (0.71, -0.71, 0)
 
-x, y, z = make_xy_map([v1, v2])
+x, y, z = make_xyz_map([v1, v2])
 
 # Makes the same list as
 # x = [-0.1, 0.71]
 # y = [0.2, -0.71]
 # y = [0, 0]
 
-print(x, y, z)
+print("Coordinate lists:", x, y, z)
+
+# Example of vector multiplication
+# i, j, k = vector_mult(x, y, z)
+print("v1 x v2 =", vector_mult(x,y,z))
