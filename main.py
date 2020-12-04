@@ -7,23 +7,23 @@ from math import pi
 
 # "Moves" origo to mass_center and calculates there.
 # Then moves origo back and returns new values
-def rotate_around_z(coordinates, mass_center, angle_radians):
+def rotate_around_z(coordinates, cm, angle_radians):
 
     # Calculate coords relative to mass center
-    coordinates[:, 0] = coordinates[:, 0] - mass_center[0]
-    coordinates[:, 1] = coordinates[:, 1] - mass_center[1]
+    coordinates[:, 0] = coordinates[:, 0] - cm[0]
+    coordinates[:, 1] = coordinates[:, 1] - cm[1]
 
     # Rotate relative coordinates around z-axis
     for coord in coordinates:
+        # Save old x because we want to access it when changing y
         x: float = coord[0]
-        y: float = coord[1]
 
         coord[0] = coord[0] * cos(angle_radians) - coord[1] * sin(angle_radians)
-        coord[1] = x * sin(angle_radians) + y * cos(angle_radians)
+        coord[1] = x * sin(angle_radians) + coord[1] * cos(angle_radians)
 
     # Transform coordinates back to origo-centric format
-    coordinates[:, 0] = coordinates[:, 0] + mass_center[0]
-    coordinates[:, 1] = coordinates[:, 1] + mass_center[1]
+    coordinates[:, 0] = coordinates[:, 0] + cm[0]
+    coordinates[:, 1] = coordinates[:, 1] + cm[1]
 
     return coordinates
 
@@ -56,16 +56,21 @@ def make_xyz_map(coordinates: list):
     return x, y, z
 
 
-# TODO: Make to work
 # Displace given object by affecting velocity
-def kinematic_displacement(x: list, y: list, v: list, dt):
-    x_new = []
-    y_new = []
+def kinematic_displacement(coordinates, v: list, dt, cm):
 
-    # x_new = [x_old + v[0] for x_old in x]
-    # y_new = [(y_old + (v[0] * dt)) for y_old in y]
+    # First update the new position of the mass center
+    # using the first defined coordinate
+    cm[0] = coordinates[0][0] + v[-1][0] * dt
+    cm[1] = coordinates[0][1] + v[-1][1] * dt
 
-    # return x_new, y_new
+    # Now update rest of the coordinates
+    for coord in coordinates:
+        coord[0] = coord[0] + v[-1][0] * dt
+        coord[1] = coord[1] + v[-1][1] * dt
+
+    # Force the function to give the updated center of the mass back along with coords
+    return coordinates, cm
 
 
 def test_rotate():
@@ -86,7 +91,14 @@ def test_rotate():
         (0., 0., 0.)
     ])
 
-    cm = (0.5, 0.5)  # Mass center
+    # coordinates = np.array([
+    #     (1.5, 0, 0),
+    #     (-1, 0.5, 0),
+    #     (-1, -0.5, 0),
+    #     (1.5, 0, 0)  # Last dot to complete the triangle
+    # ])
+
+    cm_initial = (0.5, 0.5)  # Mass center of the cube when the bottom left dot is in origo
 
     rotate_radians = pi / 4
 
@@ -94,16 +106,13 @@ def test_rotate():
 
     plt.plot(coordinates[:, 0], coordinates[:, 1])
 
-    coordinates = rotate_around_z(coordinates, cm, rotate_radians)
+    coordinates = rotate_around_z(coordinates, cm_initial, rotate_radians)
 
     plt.plot(coordinates[:, 0], coordinates[:, 1])
     plt.show()
 
 
 def test_kinematic(start_velocity, velocity_angle_radians):
-    # Define dots (or vectors)
-    # v1 = (-0.1, 0.2, 0)
-    # v2 = (0.71, -0.71, 0)
 
     # A triangle
     coordinates = np.array([
@@ -113,31 +122,47 @@ def test_kinematic(start_velocity, velocity_angle_radians):
         (1.5, 0, 0)  # Last dot to complete the triangle
     ])
 
-    x, y, z = make_xyz_map(coordinates)
+    # A cube
+    # coordinates = np.array([
+    #     (0., 0., 0.),
+    #     (1., 0., 0.),
+    #     (1., 1., 0.),
+    #     (0., 1., 0.),
+    #     (0., 0., 0.)
+    # ])
+
+    time = 0  # Passed time
+    dt = 0.1  # Time interval
+    cm = [0, 0]
+    # Calculate the center of the mass
+    cm[0] = 1 / 3 * coordinates[:, 0]
+    cm[1] = 1 / 3 * coordinates[:, 1]
 
     # Only gravity for now
     # At this scale, affecting acceleration forces stay constant
-    ax = 0
-    ay = -9.81
+    a = (0, -9.81)
 
     # Define starting speed as a 2D array. With x and y components
-    # v = [ [start_velocity * cos(velocity_angle_radians), start_velocity * sin(velocity_angle_radians)] ]
+    v = []
+    v.append([start_velocity * cos(velocity_angle_radians), start_velocity * sin(velocity_angle_radians)])
 
-    # vx = [v * cos(velocity_angle_radians)]
-    # vy = [v * sin(velocity_angle_radians)]
+    while time < 4:
+        # Now calculate the changes to velocity
+        # Velocity for every coordinate of a moving object is the same
+        v.append([v[-1][0] + dt, v[-1][1] + a[-1] * dt])
 
-    dt = 0.1  # Time interval
+        # Now calculate the changes to displacement
+        # Displacement change will affect all the coords equally
+        coordinates, cm = kinematic_displacement(coordinates, v, dt, cm)
+        coordinates = rotate_around_z(coordinates, cm, 0.1)
 
-    # Now calculate the changes to velocity
-    # v.append([[v[-1][0] + dt], [y[-1][1] + ay * dt]])
-    # v.append([1,1])
-    # print(v)
+        plt.plot(coordinates[:, 0], coordinates[:, 1])
 
-    # Now calculate the changes to displacement
-    # Displacement change will affect all the coords equally
-    # kinematic_displacement(x, y, vx, vy, dt)
+        time += dt
+
+    plt.axis('scaled')
+    plt.show()
 
 
-# test_kinematic(30, pi / 4)
-test_rotate()
-
+# test_rotate()
+test_kinematic(30, pi / 4)
