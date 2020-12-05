@@ -97,7 +97,21 @@ def kinematic_displacement(coordinates, v: list, dt, cm):
 
     # Force the function to give the updated center of the mass back along with coords
     return coordinates, cm
-
+# Checks if 2 object collide
+def multiple_collision(coordinates1, coordinates2):
+    # Count amounts of coordinates for both objects
+    coord1_size = coordinates1.shape[0]
+    coord2_size = coordinates2.shape[0]
+    
+    # Check if any dots of shape 1 are inside shape 2
+    for coord in range(coord1_size):
+        if does_collide(coordinates2, coordinates1[coord]):
+            return True
+    # Check if any dots of shape 2 are inside shape 1   
+    for coord in range(coord2_size):
+        if does_collide(coordinates1, coordinates2[coord]):
+            return True
+    return False
 
 def test_rotate():
     # A triangle
@@ -183,7 +197,7 @@ def test_kinematic(start_velocity, velocity_angle_radians):
     # ])
 
     time = 0  # Passed time
-    dt = 0.1  # Time interval
+    dt = 0.05  # Time interval
     cm = [0, 0]
     # Calculate the center of the mass
     cm[0] = 1 / 3 * coordinates[:, 0]
@@ -213,7 +227,69 @@ def test_kinematic(start_velocity, velocity_angle_radians):
     plt.axis('scaled')
     plt.show()
 
+def test_multiple(start_velocity1, velocity_angle_radians1, start_velocity2, velocity_angle_radians2):
+        # A triangle
+    coordinates1 = np.array([
+        (1.5, 0, 0),
+        (-1, 0.5, 0),
+        (-1, -0.5, 0),
+        (1.5, 0, 0)  # Last dot to complete the triangle
+    ])
+
+    # A cube
+    coordinates2 = np.array([
+        (10., 0., 0.),
+        (11., 0., 0.),
+        (11., 1., 0.),
+        (10., 1., 0.),
+        (10., 0., 0.)
+    ])
+
+    time = 0  # Passed time
+    dt = 0.01  # Time interval
+    cm1 = [0, 0]
+    # Calculate the center of the mass
+    cm1[0] = 1 / 3 * coordinates1[:, 0]
+    cm1[1] = 1 / 3 * coordinates1[:, 1]
+    cm2 = [0, 0]
+    # Calculate the center of the mass
+    cm2[0] = 1 / 4 * coordinates2[:, 0]
+    cm2[1] = 1 / 4 * coordinates2[:, 1]
+
+    # Only gravity for now
+    # At this scale, affecting acceleration forces stay constant
+    a = (0, -9.81)
+
+    # Define starting speed as a 2D array. With x and y components
+    v1 = [[start_velocity1 * cos(velocity_angle_radians1), start_velocity1 * sin(velocity_angle_radians1)]]
+    v2 = [[start_velocity2 * cos(velocity_angle_radians2), start_velocity2 * sin(velocity_angle_radians2)]]
+    
+    while time < 2:
+        # Now calculate the changes to velocity
+        # Velocity for every coordinate of a moving object is the same
+        v1.append([v1[-1][0] + dt, v1[-1][1] + a[-1] * dt])
+        v2.append([v2[-1][0] + dt, v2[-1][1] + a[-1] * dt])
+
+        # Now calculate the changes to displacement
+        # Displacement change will affect all the coords equally
+        coordinates1, cm1 = kinematic_displacement(coordinates1, v1, dt, cm1)
+        coordinates1 = rotate_around_z(coordinates1, cm1, 0.1)
+        coordinates2, cm2 = kinematic_displacement(coordinates2, v2, dt, cm2)
+        coordinates2 = rotate_around_z(coordinates2, cm2, 0.1)
+
+        plt.plot(coordinates1[:, 0], coordinates1[:, 1])
+        plt.plot(coordinates2[:, 0], coordinates2[:, 1])
+
+        time += dt
+        # Collision detection for blocks. If collides breaks the loop
+        if (multiple_collision(coordinates1,coordinates2)):
+            break
+        
+
+    plt.axis('scaled')
+    plt.show()
 
 # test_rotate()
 # test_kinematic(30, pi / 4)
-test_collision()
+# test_collision()
+test_multiple(20, pi/4, 15, 2*pi/3)
