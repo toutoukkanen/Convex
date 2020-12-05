@@ -5,10 +5,49 @@ from math import cos
 from math import pi
 
 
+# Determines if a given point is inside an area, thus collision
+def does_collide(coordinates, point):
+    if len(point) != 3:
+        print("Collision point is not 3-dimensional!")
+        pass
+
+    last_coord = None
+    for coord in coordinates:
+        if last_coord is None:
+            pass
+        else:
+            vector_n = coord - last_coord  # Vector from coord_n to coord_n+1
+            vector_np = point - last_coord       # Vector from coord_n to point
+            result = vector_mult(vector_n, vector_np)
+            print("Result:", result)
+
+            # Only if z-component is negative
+            if result[2] < 0:
+                print("Point", point, "doesn't collide with the object.")
+                return False
+
+        last_coord = coord
+
+    # At this point all z-components of multiplications are zero or positive
+    # Thus we can be sure that collision happened
+    print("Point", point, "collides with the object.")
+    return True
+
+
+# Multiplies two 3-dimensional vectors
+def vector_mult(vector1, vector2):
+    result = [0, 0, 0]
+
+    result[0] = vector1[1] * vector2[2] - vector1[2] * vector2[1]
+    result[1] = vector1[2] * vector1[0] - vector1[0] * vector2[2]
+    result[2] = vector1[0] * vector2[1] - vector1[1] * vector2[0]
+
+    return result
+
+
 # "Moves" origo to mass_center and calculates there.
 # Then moves origo back and returns new values
 def rotate_around_z(coordinates, cm, angle_radians):
-
     # Calculate coords relative to mass center
     coordinates[:, 0] = coordinates[:, 0] - cm[0]
     coordinates[:, 1] = coordinates[:, 1] - cm[1]
@@ -28,20 +67,8 @@ def rotate_around_z(coordinates, cm, angle_radians):
     return coordinates
 
 
-# Currently unused
-def vector_mult(x=[0] * 2, y=[0] * 2, z=[0] * 2):  # 0 as default argument so no out of bounds
-    # Example of vector multiplication
-    # i, j, k = vector_mult(x, y, z)
-    # print("v1 x v2 =", vector_mult(x,y,z))
-
-    i = y[0] * z[1] - z[0] * y[1]
-    j = z[0] * x[1] - x[0] * z[1]
-    k = x[0] * y[1] - y[0] * x[1]
-
-    return i, j, k
-
-
 # Given a list of coordinates, return them in component lists of x,y,z
+# Unused, but might be useful in some circumstances
 def make_xyz_map(coordinates: list):
     x = []
     y = []
@@ -58,7 +85,6 @@ def make_xyz_map(coordinates: list):
 
 # Displace given object by affecting velocity
 def kinematic_displacement(coordinates, v: list, dt, cm):
-
     # First update the new position of the mass center
     # using the first defined coordinate
     cm[0] = coordinates[0][0] + v[-1][0] * dt
@@ -112,8 +138,33 @@ def test_rotate():
     plt.show()
 
 
-def test_kinematic(start_velocity, velocity_angle_radians):
+def test_collision():
+    # A triangle
+    coordinates = np.array([
+        (1.5, 0, 0),
+        (-1, 0.5, 0),
+        (-1, -0.5, 0),
+        (1.5, 0, 0)  # Last dot to complete the triangle
+    ])
 
+    dot = [1, 0, 0]
+
+    plt.plot(coordinates[:, 0], coordinates[:, 1])
+    plt.plot(dot[0], dot[1], "ro")
+    plt.axis('scaled')
+    plt.show()
+
+    # dot1 = [0.2, 0.05, 0]
+    # dot2 = [0, 0, 5]
+    # x = [-0.1, 0.71]
+    # y = [0.2, -0.71]
+    # print(vector_mult(x, y, [0, 0]))
+
+    # Check if dot is inside our object
+    does_collide(coordinates, dot)
+
+
+def test_kinematic(start_velocity, velocity_angle_radians):
     # A triangle
     coordinates = np.array([
         (1.5, 0, 0),
@@ -143,8 +194,7 @@ def test_kinematic(start_velocity, velocity_angle_radians):
     a = (0, -9.81)
 
     # Define starting speed as a 2D array. With x and y components
-    v = []
-    v.append([start_velocity * cos(velocity_angle_radians), start_velocity * sin(velocity_angle_radians)])
+    v = [[start_velocity * cos(velocity_angle_radians), start_velocity * sin(velocity_angle_radians)]]
 
     while time < 4:
         # Now calculate the changes to velocity
@@ -165,4 +215,5 @@ def test_kinematic(start_velocity, velocity_angle_radians):
 
 
 # test_rotate()
-test_kinematic(30, pi / 4)
+# test_kinematic(30, pi / 4)
+test_collision()
