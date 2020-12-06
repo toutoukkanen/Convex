@@ -47,6 +47,7 @@ def vector_mult(vector1, vector2):
 # "Moves" origo to mass_center and calculates there.
 # Then moves origo back and returns new values
 def rotate_around_z(coordinates, cm, angle_radians):
+
     # Calculate coords relative to mass center
     coordinates[:, 0] = coordinates[:, 0] - cm[0]
     coordinates[:, 1] = coordinates[:, 1] - cm[1]
@@ -192,11 +193,13 @@ def test_kinematic(start_velocity, velocity_angle_radians):
     # ])
 
     time = 0  # Passed time
-    dt = 0.05  # Time interval
+    dt = 0.01  # Time interval
     cm = [0, 0]
+
     # Calculate the center of the mass
-    cm[0] = 1 / 3 * coordinates[:, 0]
-    cm[1] = 1 / 3 * coordinates[:, 1]
+    # This bit of code is specifically for triangles
+    cm[0] = 1 / 3 * (coordinates[0][0] + coordinates[1][0] + coordinates[2][0])
+    cm[1] = 1 / 3 * (coordinates[0][1] + coordinates[1][1] + coordinates[2][1])
 
     # Only gravity for now
     # At this scale, affecting acceleration forces stay constant
@@ -205,7 +208,7 @@ def test_kinematic(start_velocity, velocity_angle_radians):
     # Define starting speed as a 2D array. With x and y components
     v = [[start_velocity * cos(velocity_angle_radians), start_velocity * sin(velocity_angle_radians)]]
 
-    while time < 4:
+    while time < 5:
         # Now calculate the changes to velocity
         # Velocity for every coordinate of a moving object is the same
         v.append([v[-1][0] + dt, v[-1][1] + a[-1] * dt])
@@ -213,6 +216,7 @@ def test_kinematic(start_velocity, velocity_angle_radians):
         # Now calculate the changes to displacement
         # Displacement change will affect all the coords equally
         coordinates, cm = kinematic_displacement(coordinates, v, dt, cm)
+
         coordinates = rotate_around_z(coordinates, cm, 0.1)
 
         plt.plot(coordinates[:, 0], coordinates[:, 1])
@@ -246,14 +250,16 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
     ])
 
     time = 0  # Passed time
+
     cm1 = [0, 0]
     # Calculate the center of the mass
-    cm1[0] = 1 / 3 * coordinates1[:, 0]
-    cm1[1] = 1 / 3 * coordinates1[:, 1]
+    cm1[0] = 1 / 3 * (coordinates1[0][0] + coordinates1[1][0] + coordinates1[2][0])
+    cm1[1] = 1 / 3 * (coordinates1[0][1] + coordinates1[1][1] + coordinates1[2][1])
+
     cm2 = [0, 0]
     # Calculate the center of the mass
-    cm2[0] = 1 / 4 * coordinates2[:, 0]
-    cm2[1] = 1 / 4 * coordinates2[:, 1]
+    cm2[0] = 1 / 4 * (sum(coordinates2[:, 0]) - coordinates2[-1][0])
+    cm2[1] = 1 / 4 * (sum(coordinates2[:, 1]) - coordinates2[-1][1])
 
     # Only gravity for now
     # At this scale, affecting acceleration forces stay constant
@@ -298,8 +304,9 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
 # test_rotate()
 # test_kinematic(30, pi / 4)
 # test_collision()
+
 test_multiple(start_velocity1=15, velocity_angle_radians1=pi / 4,
-              start_velocity2=15, velocity_angle_radians2=2 * pi / 3,
-              rotation_angle1=10, rotation_angle2=10,
+              start_velocity2=7, velocity_angle_radians2=2 * pi / 3,
+              rotation_angle1=pi/3, rotation_angle2=1,
               dt=0.001,
-              plot_interval=0.008)
+              plot_interval=0.01)
