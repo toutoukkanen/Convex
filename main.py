@@ -281,7 +281,7 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
 
         time += dt
 
-        # Plot at specific time intervals. Round the value by 4 digits for comparison precision.
+        # Plot at specific time intervals. Round the value by 2 digits for comparison precision.
         if round(time % plot_interval, 2) == 0:
             plt.plot(coordinates1[:, 0], coordinates1[:, 1])
             plt.plot(coordinates2[:, 0], coordinates2[:, 1])
