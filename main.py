@@ -6,7 +6,7 @@ from math import pi
 
 
 # Determines if a given point is inside an area, thus collision
-def does_collide(coordinates, point):
+def does_collide(coordinates, point, mark_point=False):
     if len(point) != 3:
         print("Collision point is not 3-dimensional!")
         pass
@@ -16,21 +16,20 @@ def does_collide(coordinates, point):
         if last_coord is None:
             pass
         else:
-            vector_n = coord - last_coord  # Vector from coord_n to coord_n+1
-            vector_np = point - last_coord       # Vector from coord_n to point
-            result = vector_mult(vector_n, vector_np)
-            print("Result:", result)
+            vector_n_plus1 = coord - last_coord  # Vector from coord_n to coord_n+1
+            vector_np = point - last_coord  # Vector from coord_n to point
+            result = vector_mult(vector_n_plus1, vector_np)
 
             # Only if z-component is negative
             if result[2] < 0:
-                print("Point", point, "doesn't collide with the object.")
                 return False
 
         last_coord = coord
 
     # At this point all z-components of multiplications are zero or positive
     # Thus we can be sure that collision happened
-    print("Point", point, "collides with the object.")
+    if mark_point:
+        plt.plot(point[0], point[1], "ro")
     return True
 
 
@@ -57,6 +56,7 @@ def rotate_around_z(coordinates, cm, angle_radians):
         # Save old x because we want to access it when changing y
         x: float = coord[0]
 
+        # Rotation matrix
         coord[0] = coord[0] * cos(angle_radians) - coord[1] * sin(angle_radians)
         coord[1] = x * sin(angle_radians) + coord[1] * cos(angle_radians)
 
@@ -97,21 +97,23 @@ def kinematic_displacement(coordinates, v: list, dt, cm):
 
     # Force the function to give the updated center of the mass back along with coords
     return coordinates, cm
+
+
 # Checks if 2 object collide
 def multiple_collision(coordinates1, coordinates2):
-    # Count amounts of coordinates for both objects
-    coord1_size = coordinates1.shape[0]
-    coord2_size = coordinates2.shape[0]
-    
     # Check if any dots of shape 1 are inside shape 2
-    for coord in range(coord1_size):
-        if does_collide(coordinates2, coordinates1[coord]):
+    for coord in coordinates1:
+        if does_collide(coordinates2, coord, mark_point=True):
             return True
+
     # Check if any dots of shape 2 are inside shape 1   
-    for coord in range(coord2_size):
-        if does_collide(coordinates1, coordinates2[coord]):
+    for coord in coordinates2:
+        if does_collide(coordinates1, coord, mark_point=True):
             return True
+
+    # We can be sure that no collision happened
     return False
+
 
 def test_rotate():
     # A triangle
@@ -130,13 +132,6 @@ def test_rotate():
         (0., 1., 0.),
         (0., 0., 0.)
     ])
-
-    # coordinates = np.array([
-    #     (1.5, 0, 0),
-    #     (-1, 0.5, 0),
-    #     (-1, -0.5, 0),
-    #     (1.5, 0, 0)  # Last dot to complete the triangle
-    # ])
 
     cm_initial = (0.5, 0.5)  # Mass center of the cube when the bottom left dot is in origo
 
@@ -175,7 +170,7 @@ def test_collision():
     # print(vector_mult(x, y, [0, 0]))
 
     # Check if dot is inside our object
-    does_collide(coordinates, dot)
+    print(does_collide(coordinates, dot))
 
 
 def test_kinematic(start_velocity, velocity_angle_radians):
@@ -227,8 +222,13 @@ def test_kinematic(start_velocity, velocity_angle_radians):
     plt.axis('scaled')
     plt.show()
 
-def test_multiple(start_velocity1, velocity_angle_radians1, start_velocity2, velocity_angle_radians2):
-        # A triangle
+
+def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
+                  start_velocity2=0., velocity_angle_radians2=0.,
+                  rotation_angle1=0., rotation_angle2=0.,
+                  dt=1.,
+                  plot_interval=0.1):
+    # A triangle
     coordinates1 = np.array([
         (1.5, 0, 0),
         (-1, 0.5, 0),
@@ -246,7 +246,6 @@ def test_multiple(start_velocity1, velocity_angle_radians1, start_velocity2, vel
     ])
 
     time = 0  # Passed time
-    dt = 0.01  # Time interval
     cm1 = [0, 0]
     # Calculate the center of the mass
     cm1[0] = 1 / 3 * coordinates1[:, 0]
@@ -263,8 +262,9 @@ def test_multiple(start_velocity1, velocity_angle_radians1, start_velocity2, vel
     # Define starting speed as a 2D array. With x and y components
     v1 = [[start_velocity1 * cos(velocity_angle_radians1), start_velocity1 * sin(velocity_angle_radians1)]]
     v2 = [[start_velocity2 * cos(velocity_angle_radians2), start_velocity2 * sin(velocity_angle_radians2)]]
-    
-    while time < 2:
+
+    # Run for five seconds
+    while time < 5:
         # Now calculate the changes to velocity
         # Velocity for every coordinate of a moving object is the same
         v1.append([v1[-1][0] + dt, v1[-1][1] + a[-1] * dt])
@@ -273,23 +273,33 @@ def test_multiple(start_velocity1, velocity_angle_radians1, start_velocity2, vel
         # Now calculate the changes to displacement
         # Displacement change will affect all the coords equally
         coordinates1, cm1 = kinematic_displacement(coordinates1, v1, dt, cm1)
-        coordinates1 = rotate_around_z(coordinates1, cm1, 0.1)
         coordinates2, cm2 = kinematic_displacement(coordinates2, v2, dt, cm2)
-        coordinates2 = rotate_around_z(coordinates2, cm2, 0.1)
 
-        plt.plot(coordinates1[:, 0], coordinates1[:, 1])
-        plt.plot(coordinates2[:, 0], coordinates2[:, 1])
+        # Rotate objects. Rotation is scaled with time.
+        coordinates1 = rotate_around_z(coordinates1, cm1, rotation_angle1 * dt)
+        coordinates2 = rotate_around_z(coordinates2, cm2, rotation_angle2 * dt)
 
         time += dt
+
+        # Plot at specific time intervals. Round the value by 4 digits for comparison precision.
+        if round(time % plot_interval, 2) == 0:
+            plt.plot(coordinates1[:, 0], coordinates1[:, 1])
+            plt.plot(coordinates2[:, 0], coordinates2[:, 1])
+
         # Collision detection for blocks. If collides breaks the loop
-        if (multiple_collision(coordinates1,coordinates2)):
+        if multiple_collision(coordinates1, coordinates2):
+            print("Collision at time", time)
             break
-        
 
     plt.axis('scaled')
     plt.show()
 
+
 # test_rotate()
 # test_kinematic(30, pi / 4)
 # test_collision()
-test_multiple(20, pi/4, 15, 2*pi/3)
+test_multiple(start_velocity1=15, velocity_angle_radians1=pi / 4,
+              start_velocity2=15, velocity_angle_radians2=2 * pi / 3,
+              rotation_angle1=10, rotation_angle2=10,
+              dt=0.001,
+              plot_interval=0.008)
