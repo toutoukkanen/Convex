@@ -105,15 +105,15 @@ def multiple_collision(coordinates1, coordinates2):
     # Check if any dots of shape 1 are inside shape 2
     for coord in coordinates1:
         if does_collide(coordinates2, coord, mark_point=True):
-            return True
+            return coord
 
     # Check if any dots of shape 2 are inside shape 1   
     for coord in coordinates2:
         if does_collide(coordinates1, coord, mark_point=True):
-            return True
+            return coord
 
     # We can be sure that no collision happened
-    return False
+    return None
 
 
 def test_rotate():
@@ -291,7 +291,7 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
             plt.plot(coordinates2[:, 0], coordinates2[:, 1])
 
         # Collision detection for blocks. If collides breaks the loop
-        if multiple_collision(coordinates1, coordinates2):
+        if multiple_collision(coordinates1, coordinates2) is not None:
             print("Collision at time", time)
             break
 
