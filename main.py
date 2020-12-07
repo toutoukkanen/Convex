@@ -88,13 +88,13 @@ def make_xyz_map(coordinates: list):
 def kinematic_displacement(coordinates, v: list, dt, cm):
     # First update the new position of the mass center
     # using the first defined coordinate
-    cm[0] = cm[0] + v[-1][0] * dt
-    cm[1] = cm[1] + v[-1][1] * dt
+    cm[0] = cm[0] + v[0] * dt
+    cm[1] = cm[1] + v[1] * dt
 
     # Now update rest of the coordinates
     for coord in coordinates:
-        coord[0] = coord[0] + v[-1][0] * dt
-        coord[1] = coord[1] + v[-1][1] * dt
+        coord[0] = coord[0] + v[0] * dt
+        coord[1] = coord[1] + v[1] * dt
 
     # Force the function to give the updated center of the mass back along with coords
     return coordinates, cm
@@ -198,20 +198,20 @@ def test_kinematic(start_velocity, velocity_angle_radians):
 
     # Calculate the center of the mass
     # This bit of code is specifically for triangles
-    cm[0] = 1 / 3 * (coordinates[0][0] + coordinates[1][0] + coordinates[2][0])
-    cm[1] = 1 / 3 * (coordinates[0][1] + coordinates[1][1] + coordinates[2][1])
+    cm = [1 / 3 * (coordinates[0][0] + coordinates[1][0] + coordinates[2][0]),
+          1 / 3 * (coordinates[0][1] + coordinates[1][1] + coordinates[2][1])]
 
     # Only gravity for now
     # At this scale, affecting acceleration forces stay constant
-    a = (0, -9.81)
+    a = [0, -9.81]
 
     # Define starting speed as a 2D array. With x and y components
-    v = [[start_velocity * cos(velocity_angle_radians), start_velocity * sin(velocity_angle_radians)]]
+    v = [start_velocity * cos(velocity_angle_radians), start_velocity * sin(velocity_angle_radians)]
 
     while time < 5:
         # Now calculate the changes to velocity
         # Velocity for every coordinate of a moving object is the same
-        v.append([v[-1][0] + dt, v[-1][1] + a[-1] * dt])
+        v = [v[0] + a[0] * dt, v[1] + a[1] * dt]
 
         # Now calculate the changes to displacement
         # Displacement change will affect all the coords equally
@@ -249,32 +249,30 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
         (10., 0., 0.)
     ])
 
-    time = 0  # Passed time
-
-    cm1 = [0, 0]
     # Calculate the center of the mass
-    cm1[0] = 1 / 3 * (coordinates1[0][0] + coordinates1[1][0] + coordinates1[2][0])
-    cm1[1] = 1 / 3 * (coordinates1[0][1] + coordinates1[1][1] + coordinates1[2][1])
-
-    cm2 = [0, 0]
-    # Calculate the center of the mass
-    cm2[0] = 1 / 4 * (sum(coordinates2[:, 0]) - coordinates2[-1][0])
-    cm2[1] = 1 / 4 * (sum(coordinates2[:, 1]) - coordinates2[-1][1])
+    cm1 = [1 / 3 * (coordinates1[0][0] + coordinates1[1][0] + coordinates1[2][0]),
+           1 / 3 * (coordinates1[0][1] + coordinates1[1][1] + coordinates1[2][1])]
+    cm2 = [1 / 4 * (sum(coordinates2[:, 0]) - coordinates2[-1][0]),
+           1 / 4 * (sum(coordinates2[:, 1]) - coordinates2[-1][1])]
 
     # Only gravity for now
     # At this scale, affecting acceleration forces stay constant
-    a = (0, -9.81)
+    a = [0, -9.81]
 
-    # Define starting speed as a 2D array. With x and y components
-    v1 = [[start_velocity1 * cos(velocity_angle_radians1), start_velocity1 * sin(velocity_angle_radians1)]]
-    v2 = [[start_velocity2 * cos(velocity_angle_radians2), start_velocity2 * sin(velocity_angle_radians2)]]
+    # Define starting speed as an array with x and y components
+    v1 = [start_velocity1 * cos(velocity_angle_radians1),
+          start_velocity1 * sin(velocity_angle_radians1)]
+    v2 = [start_velocity2 * cos(velocity_angle_radians2),
+          start_velocity2 * sin(velocity_angle_radians2)]
 
-    # Run for five seconds
-    while time < 1:
+    time = 0  # Passed time
+
+    # Run for five seconds unless collision happened
+    while time < 5:
         # Now calculate the changes to velocity
         # Velocity for every coordinate of a moving object is the same
-        v1.append([v1[-1][0] + dt, v1[-1][1] + a[-1] * dt])
-        v2.append([v2[-1][0] + dt, v2[-1][1] + a[-1] * dt])
+        v1 = [v1[0] + a[0] * dt, v1[1] + a[1] * dt]
+        v2 = [v2[0] + a[0] * dt, v2[1] + a[1] * dt]
 
         # Now calculate the changes to displacement
         # Displacement change will affect all the coords equally
