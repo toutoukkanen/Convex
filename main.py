@@ -88,8 +88,8 @@ def make_xyz_map(coordinates: list):
 def kinematic_displacement(coordinates, v: list, dt, cm):
     # First update the new position of the mass center
     # using the first defined coordinate
-    cm[0] = coordinates[0][0] + v[-1][0] * dt
-    cm[1] = coordinates[0][1] + v[-1][1] * dt
+    cm[0] = cm[0] + v[-1][0] * dt
+    cm[1] = cm[1] + v[-1][1] * dt
 
     # Now update rest of the coordinates
     for coord in coordinates:
@@ -229,7 +229,7 @@ def test_kinematic(start_velocity, velocity_angle_radians):
 
 def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
                   start_velocity2=0., velocity_angle_radians2=0.,
-                  rotation_angle1=0., rotation_angle2=0.,
+                  angular_velocity1=0., angular_velocity2=0.,
                   dt=1.,
                   plot_interval=0.1):
     # A triangle
@@ -270,7 +270,7 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
     v2 = [[start_velocity2 * cos(velocity_angle_radians2), start_velocity2 * sin(velocity_angle_radians2)]]
 
     # Run for five seconds
-    while time < 5:
+    while time < 1:
         # Now calculate the changes to velocity
         # Velocity for every coordinate of a moving object is the same
         v1.append([v1[-1][0] + dt, v1[-1][1] + a[-1] * dt])
@@ -282,8 +282,8 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
         coordinates2, cm2 = kinematic_displacement(coordinates2, v2, dt, cm2)
 
         # Rotate objects. Rotation is scaled with time.
-        coordinates1 = rotate_around_z(coordinates1, cm1, rotation_angle1 * dt)
-        coordinates2 = rotate_around_z(coordinates2, cm2, rotation_angle2 * dt)
+        coordinates1 = rotate_around_z(coordinates1, cm1, angular_velocity1 * dt)
+        coordinates2 = rotate_around_z(coordinates2, cm2, angular_velocity2 * dt)
 
         time += dt
 
@@ -306,7 +306,7 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
 # test_collision()
 
 test_multiple(start_velocity1=15, velocity_angle_radians1=pi / 4,
-              start_velocity2=7, velocity_angle_radians2=2 * pi / 3,
-              rotation_angle1=pi/3, rotation_angle2=1,
+              start_velocity2=8.9, velocity_angle_radians2=2 * pi / 3,
+              angular_velocity1=pi/3, angular_velocity2=1,
               dt=0.001,
               plot_interval=0.01)
