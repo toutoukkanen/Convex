@@ -102,20 +102,36 @@ def kinematic_displacement(coordinates, v: list, dt, cm):
 
 
 # Checks if 2 object collide
-# Return coordinate of collision and collision receiver
-def multiple_collision(coordinates1, coordinates2):
+# Return coordinate of collision, collision receiver and velocity of the receiver
+def multiple_collision(coordinates1, coordinates2, cm1, cm2):
     # Check if any dots of shape 1 are inside shape 2
     for coord in coordinates1:
         if does_collide(coordinates2, coord, mark_point=True):
-            return coord, coordinates2  # Return collision point and collision receiver
+            return coord, coordinates2, cm2, cm1
 
     # Check if any dots of shape 2 are inside shape 1   
     for coord in coordinates2:
         if does_collide(coordinates1, coord, mark_point=True):
-            return coord, coordinates1  # Return collision point and collision receiver
+            return coord, coordinates1, cm1, cm2
 
     # We can be sure that no collision happened
-    return None, None
+    return None, None, None, None
+
+
+# Construct a vector and create two normals for it
+# Then define the "correct" normal that points to the causing object
+def find_collision_normal(point1, point2, cm_receiver, cm_causer):
+    normal1 = np.array([point2[0], -point1[1]])
+    normal2 = np.array([-point2[0], point1[1]])
+
+    cm_receiver_to_cm_causer = cm_causer - cm_receiver
+
+    # Check which normal has same signatures as the cm_receiver_to_cm_causer
+    if cm_receiver_to_cm_causer[0] * normal1[0] > 0 and cm_receiver_to_cm_causer[1] * normal1[1] > 0:
+        return normal1
+
+    if cm_receiver_to_cm_causer[0] * normal2[0] > 0 and cm_receiver_to_cm_causer[1] * normal2[1] > 0:
+        return normal2
 
 
 # Find nearest side of an object
@@ -295,10 +311,10 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
     ])
 
     # Calculate the center of the mass
-    cm1 = [1 / 3 * (coordinates1[0][0] + coordinates1[1][0] + coordinates1[2][0]),
-           1 / 3 * (coordinates1[0][1] + coordinates1[1][1] + coordinates1[2][1])]
-    cm2 = [1 / 4 * (sum(coordinates2[:, 0]) - coordinates2[-1][0]),
-           1 / 4 * (sum(coordinates2[:, 1]) - coordinates2[-1][1])]
+    cm1 = np.array([1 / 3 * (coordinates1[0][0] + coordinates1[1][0] + coordinates1[2][0]),
+           1 / 3 * (coordinates1[0][1] + coordinates1[1][1] + coordinates1[2][1])])
+    cm2 = np.array([1 / 4 * (sum(coordinates2[:, 0]) - coordinates2[-1][0]),
+           1 / 4 * (sum(coordinates2[:, 1]) - coordinates2[-1][1])])
 
     # Only gravity for now
     # At this scale, affecting acceleration forces stay constant
@@ -335,13 +351,19 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
             plt.plot(coordinates1[:, 0], coordinates1[:, 1])
             plt.plot(coordinates2[:, 0], coordinates2[:, 1])
 
-        collision_point, collision_receiver = multiple_collision(coordinates1, coordinates2)
+        collision_point, collision_receiver, cm_receiver, cm_causer = multiple_collision(coordinates1, coordinates2, cm1, cm2)
 
         # Detect collision for objects
         if collision_point is not None:
             print("Collision at time", time)
+            print("Receiver CM", cm_receiver, "Causer CM", cm_causer)
 
-            side_coord1, side_coord2 = find_nearest_side_to_point(collision_receiver, collision_point)
+            # Find out the side where collision happened
+            side_coord1, side_coord2 = find_nearest_side_to_point(collision_receiver, collision_point, True)
+
+            # Now calculate the "correct" normal of collided side
+            normal = find_collision_normal(side_coord1, side_coord2, cm_receiver, cm_causer)
+            print("Found normal", normal)
 
             # Determine new speed and angular speed
 
