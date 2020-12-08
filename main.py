@@ -3,6 +3,7 @@ import numpy as np
 from math import sin
 from math import cos
 from math import pi
+from math import sqrt
 
 
 # Determines if a given point is inside an area, thus collision
@@ -12,9 +13,10 @@ def does_collide(coordinates, point, mark_point=False):
         pass
 
     last_coord = None
+
     for coord in coordinates:
         if last_coord is None:
-            pass
+            last_coord = coord
         else:
             vector_n_plus1 = coord - last_coord  # Vector from coord_n to coord_n+1
             vector_np = point - last_coord  # Vector from coord_n to point
@@ -47,7 +49,6 @@ def vector_mult(vector1, vector2):
 # "Moves" origo to mass_center and calculates there.
 # Then moves origo back and returns new values
 def rotate_around_z(coordinates, cm, angle_radians):
-
     # Calculate coords relative to mass center
     coordinates[:, 0] = coordinates[:, 0] - cm[0]
     coordinates[:, 1] = coordinates[:, 1] - cm[1]
@@ -101,19 +102,63 @@ def kinematic_displacement(coordinates, v: list, dt, cm):
 
 
 # Checks if 2 object collide
+# Return coordinate of collision and collision receiver
 def multiple_collision(coordinates1, coordinates2):
     # Check if any dots of shape 1 are inside shape 2
     for coord in coordinates1:
         if does_collide(coordinates2, coord, mark_point=True):
-            return coord
+            return coord, coordinates2  # Return collision point and collision receiver
 
     # Check if any dots of shape 2 are inside shape 1   
     for coord in coordinates2:
         if does_collide(coordinates1, coord, mark_point=True):
-            return coord
+            return coord, coordinates1  # Return collision point and collision receiver
 
     # We can be sure that no collision happened
-    return None
+    return None, None
+
+
+# Find nearest side of an object
+# Return coordinates that make up the side
+def find_nearest_side_to_point(coordinates, point, mark_points=False):
+
+    lowest_distance = 0
+    coord1 = [0, 0]
+    coord2 = [0, 0]
+
+    last_coord = None
+
+    for coord in coordinates:
+        if last_coord is None:
+            pass
+        else:
+            numerator = abs((coord[0]-last_coord[0]) * (point[1]-last_coord[1]) -
+                            (point[0]-last_coord[0]) * (coord[1]-last_coord[1]))
+            denominator = sqrt((coord[0] - last_coord[0])**2 + (coord[1] - last_coord[1])**2)
+
+            distance = numerator/denominator
+
+            if lowest_distance == 0:  # Make sure that last_coord is valid
+                lowest_distance = distance
+
+            if distance < lowest_distance:
+                lowest_distance = distance
+                coord1 = coord
+                coord2 = last_coord
+
+        last_coord = coord
+
+    if mark_points:
+        plt.plot(coord1[0], coord1[1], "ro")
+        plt.plot(coord2[0], coord2[1], "ro")
+
+    return coord1, coord2
+
+
+def calculate_collision_effects(coordinates1, coordinates2, cm1, cm2, v1, v2, av1, av2):
+    # Calculate impulse of collision
+
+    pass
 
 
 def test_rotate():
@@ -290,9 +335,16 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
             plt.plot(coordinates1[:, 0], coordinates1[:, 1])
             plt.plot(coordinates2[:, 0], coordinates2[:, 1])
 
-        # Collision detection for blocks. If collides breaks the loop
-        if multiple_collision(coordinates1, coordinates2) is not None:
+        collision_point, collision_receiver = multiple_collision(coordinates1, coordinates2)
+
+        # Detect collision for objects
+        if collision_point is not None:
             print("Collision at time", time)
+
+            side_coord1, side_coord2 = find_nearest_side_to_point(collision_receiver, collision_point)
+
+            # Determine new speed and angular speed
+
             break
 
     plt.axis('scaled')
@@ -304,7 +356,7 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
 # test_collision()
 
 test_multiple(start_velocity1=15, velocity_angle_radians1=pi / 4,
-              start_velocity2=8.9, velocity_angle_radians2=2 * pi / 3,
-              angular_velocity1=pi/3, angular_velocity2=1,
+              start_velocity2=10, velocity_angle_radians2=2 * pi / 3,
+              angular_velocity1=pi / 2, angular_velocity2=1,
               dt=0.001,
               plot_interval=0.01)
