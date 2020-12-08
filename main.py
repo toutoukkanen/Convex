@@ -5,6 +5,8 @@ from math import cos
 from math import pi
 from math import sqrt
 
+#test
+
 
 # Determines if a given point is inside an area, thus collision
 def does_collide(coordinates, point, mark_point=False):
