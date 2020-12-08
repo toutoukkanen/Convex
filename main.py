@@ -5,22 +5,25 @@ from math import cos
 from math import pi
 from math import sqrt
 
-#test
-
 
 # Determines if a given point is inside an area, thus collision
 def does_collide(coordinates, point, mark_point=False):
+    global piste
+    #global vektorix
+    #global vektoriy
+    
     if len(point) != 3:
         print("Collision point is not 3-dimensional!")
         pass
 
     last_coord = None
-
     for coord in coordinates:
         if last_coord is None:
-            last_coord = coord
+            pass
         else:
             vector_n_plus1 = coord - last_coord  # Vector from coord_n to coord_n+1
+            #vektorix = vector_n_plus1[0]
+            #vektoriy = vector_n_plus1[1]
             vector_np = point - last_coord  # Vector from coord_n to point
             result = vector_mult(vector_n_plus1, vector_np)
 
@@ -34,7 +37,11 @@ def does_collide(coordinates, point, mark_point=False):
     # Thus we can be sure that collision happened
     if mark_point:
         plt.plot(point[0], point[1], "ro")
+        piste = np.array([point[0], point[1], point[2]])
     return True
+
+# Find nearest side of an object
+# Return coordinates that make up the side
 
 
 # Multiplies two 3-dimensional vectors
@@ -42,7 +49,7 @@ def vector_mult(vector1, vector2):
     result = [0, 0, 0]
 
     result[0] = vector1[1] * vector2[2] - vector1[2] * vector2[1]
-    result[1] = -(vector1[0] * vector2[2] - vector1[2] * vector2[0])
+    result[1] = vector1[2] * vector2[0] - vector1[0] * vector2[2]
     result[2] = vector1[0] * vector2[1] - vector1[1] * vector2[0]
 
     return result
@@ -51,6 +58,7 @@ def vector_mult(vector1, vector2):
 # "Moves" origo to mass_center and calculates there.
 # Then moves origo back and returns new values
 def rotate_around_z(coordinates, cm, angle_radians):
+
     # Calculate coords relative to mass center
     coordinates[:, 0] = coordinates[:, 0] - cm[0]
     coordinates[:, 1] = coordinates[:, 1] - cm[1]
@@ -104,36 +112,19 @@ def kinematic_displacement(coordinates, v: list, dt, cm):
 
 
 # Checks if 2 object collide
-# Return coordinate of collision, collision receiver and velocity of the receiver
 def multiple_collision(coordinates1, coordinates2, cm1, cm2):
     # Check if any dots of shape 1 are inside shape 2
     for coord in coordinates1:
         if does_collide(coordinates2, coord, mark_point=True):
-            return coord, coordinates2, cm2, cm1
+            return coord, coordinates2, cm1, cm2  # Return collision point and collision receiver
 
     # Check if any dots of shape 2 are inside shape 1   
     for coord in coordinates2:
         if does_collide(coordinates1, coord, mark_point=True):
-            return coord, coordinates1, cm1, cm2
+            return coord, coordinates1, cm1, cm2  # Return collision point and collision receiver
 
     # We can be sure that no collision happened
     return None, None, None, None
-
-
-# Construct a vector and create two normals for it
-# Then define the "correct" normal that points to the causing object
-def find_collision_normal(point1, point2, cm_receiver, cm_causer):
-    normal1 = np.array([point2[0], -point1[1]])
-    normal2 = np.array([-point2[0], point1[1]])
-
-    cm_receiver_to_cm_causer = cm_causer - cm_receiver
-
-    # Check which normal has same signatures as the cm_receiver_to_cm_causer
-    if cm_receiver_to_cm_causer[0] * normal1[0] > 0 and cm_receiver_to_cm_causer[1] * normal1[1] > 0:
-        return normal1
-
-    if cm_receiver_to_cm_causer[0] * normal2[0] > 0 and cm_receiver_to_cm_causer[1] * normal2[1] > 0:
-        return normal2
 
 
 # Find nearest side of an object
@@ -172,12 +163,38 @@ def find_nearest_side_to_point(coordinates, point, mark_points=False):
 
     return coord1, coord2
 
+def find_collision_normal(point1, point2, collision_point, cm_causer):
+
+    # Create the vector from point1 to point2
+    point1_to_point2 = point2 - point1
+
+    # Create exactly two normals. One of them is the "right" normal
+    normal1 = np.array([point1_to_point2[1], -point1_to_point2[0], 0])
+    normal2 = np.array([-point1_to_point2[1], point1_to_point2[0], 0])
+
+    # Create a vector from collision point to causer's mass center
+    collision_point_to_cm_causer = cm_causer - collision_point
+
+    # Check which normal has positive dot product with the collision point
+    dotproduct1 = (collision_point_to_cm_causer[0] * normal1[0] +
+                   collision_point_to_cm_causer[1] * normal1[1] +
+                   collision_point_to_cm_causer[2] * normal1[2])
+
+    if dotproduct1 > 0:
+        return normal2
+
+    dotproduct2 = (collision_point_to_cm_causer[0] * normal2[0] +
+                   collision_point_to_cm_causer[1] * normal2[1] +
+                   collision_point_to_cm_causer[2] * normal2[2])
+
+    if dotproduct2 > 0:
+        return normal1
+
 
 def calculate_collision_effects(coordinates1, coordinates2, cm1, cm2, v1, v2, av1, av2):
     # Calculate impulse of collision
 
     pass
-
 
 def test_rotate():
     # A triangle
@@ -235,6 +252,7 @@ def test_collision():
 
     # Check if dot is inside our object
     print(does_collide(coordinates, dot))
+    
 
 
 def test_kinematic(start_velocity, velocity_angle_radians):
@@ -311,31 +329,32 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
         (10., 1., 0.),
         (10., 0., 0.)
     ])
+    
+    has_collided = False
 
-    # Calculate the center of the mass
-    cm1 = np.array([1 / 3 * (coordinates1[0][0] + coordinates1[1][0] + coordinates1[2][0]),
-           1 / 3 * (coordinates1[0][1] + coordinates1[1][1] + coordinates1[2][1])])
-    cm2 = np.array([1 / 4 * (sum(coordinates2[:, 0]) - coordinates2[-1][0]),
-           1 / 4 * (sum(coordinates2[:, 1]) - coordinates2[-1][1])])
+    cm1 = [1 / 3 * (coordinates1[0][0] + coordinates1[1][0] + coordinates1[2][0]),
+           1 / 3 * (coordinates1[0][1] + coordinates1[1][1] + coordinates1[2][1]), 0]
+    cm2 = [1 / 4 * (sum(coordinates2[:, 0]) - coordinates2[-1][0]),
+           1 / 4 * (sum(coordinates2[:, 1]) - coordinates2[-1][1]), 0]
 
     # Only gravity for now
     # At this scale, affecting acceleration forces stay constant
     a = [0, -9.81]
 
-    # Define starting speed as an array with x and y components
+    # Define starting speed as a 2D array. With x and y components
     v1 = [start_velocity1 * cos(velocity_angle_radians1),
-          start_velocity1 * sin(velocity_angle_radians1)]
+          start_velocity1 * sin(velocity_angle_radians1), 0]
     v2 = [start_velocity2 * cos(velocity_angle_radians2),
-          start_velocity2 * sin(velocity_angle_radians2)]
+          start_velocity2 * sin(velocity_angle_radians2), 0]
+    
+    time = 0
 
-    time = 0  # Passed time
-
-    # Run for five seconds unless collision happened
-    while time < 5:
+    # Run for five seconds
+    while time < 1.5:
         # Now calculate the changes to velocity
         # Velocity for every coordinate of a moving object is the same
-        v1 = [v1[0] + a[0] * dt, v1[1] + a[1] * dt]
-        v2 = [v2[0] + a[0] * dt, v2[1] + a[1] * dt]
+        v1 = [v1[0] + a[0] * dt, v1[1] + a[1] * dt, 0]
+        v2 = [v2[0] + a[0] * dt, v2[1] + a[1] * dt, 0]
 
         # Now calculate the changes to displacement
         # Displacement change will affect all the coords equally
@@ -346,30 +365,117 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
         coordinates1 = rotate_around_z(coordinates1, cm1, angular_velocity1 * dt)
         coordinates2 = rotate_around_z(coordinates2, cm2, angular_velocity2 * dt)
 
-        time += dt
+        
 
         # Plot at specific time intervals. Round the value by 2 digits for comparison precision.
         if round(time % plot_interval, 2) == 0:
             plt.plot(coordinates1[:, 0], coordinates1[:, 1])
             plt.plot(coordinates2[:, 0], coordinates2[:, 1])
-
+            
         collision_point, collision_receiver, cm_receiver, cm_causer = multiple_collision(coordinates1, coordinates2, cm1, cm2)
 
-        # Detect collision for objects
-        if collision_point is not None:
-            print("Collision at time", time)
-            print("Receiver CM", cm_receiver, "Causer CM", cm_causer)
-
-            # Find out the side where collision happened
+        # Collision detection for blocks. If collides breaks the loop
+        if collision_point is not None and has_collided == False:
+            has_collided = True
             side_coord1, side_coord2 = find_nearest_side_to_point(collision_receiver, collision_point, True)
+            
+            
+            
+            vektorix = side_coord1[0] - side_coord2[0]
+            vektoriy = side_coord1[1] - side_coord2[1]
+            
+            tx = vektorix/sqrt(vektorix * vektorix + vektoriy * vektoriy)
+            ty = vektoriy/sqrt(vektorix * vektorix + vektoriy * vektoriy)
+            
+            nx = ty
+            ny = tx
+            
+            ny = -(ny)
+            
+            #n = [nx, ny, 0]
+            
+            n = find_collision_normal(side_coord1, side_coord2, collision_point, cm_causer)
+            #print(n)
+            
+            
+            rAP = collision_point - cm1
+            rBP = collision_point - cm2
+            
+            angular_velocity1_vector = [0, 0, angular_velocity1]
+            angular_velocity2_vector = [0, 0, angular_velocity2]
+            
+            #print(rAPxn)
+            
+            wxrAP = vector_mult(angular_velocity1_vector, rAP)
+            wxrBP = vector_mult(angular_velocity2_vector, rBP)
+            vAP = [v1[0] + wxrAP[0], v1[1] + wxrAP[1]]
+            #print(vAP)
+            vBP = [v2[0] + wxrBP[0], v2[1] + wxrBP[1]]
+            #print(vBP)
+            vAB = [vAP[0] - vBP[0], vAP[1] - vBP[1], 0]
+            
+            yläpuoli = vAB[0] * n[0] + vAB[1] * n[1]
+            #if yläpuoli > 0:
+               # nx = -(nx)
+               # ny = -(ny)
+                #n = [nx, ny, 0]
+                #yläpuoli = vAB[0] * n[0] + vAB[1] * n[1]
+                
+            #print(yläpuoli)
+            
+            rAPxn = vector_mult(rAP, n)
+            rBPxn = vector_mult(rBP, n)
+            
+            #absrAPxn = [abs(rAPxn[0]), abs(rAPxn[1]), abs(rAPxn[2])]
+            #absrBPxn = [abs(rBPxn[0]), abs(rBPxn[1]), abs(rBPxn[2])]
+            
+            absrAPxn2 = [abs(rAPxn[0])**2, abs(rAPxn[1])**2, abs(rAPxn[2])**2]
+            absrBPxn2 = [abs(rBPxn[0])**2, abs(rBPxn[1])**2, abs(rBPxn[2])**2]
+            
+            e = 0.5
+            
+            ma = 2
+            mb = 1
+            ja = 0.02
+            jb = 0.02
+            
+            alapuoli = 1/ma + 1/mb + absrAPxn2[2]/ja + absrBPxn2[2]/jb
+            #print(alapuoli)
+            
+            impulssi = -(1+e) * yläpuoli / alapuoli
+            
+            v1l = [v1[0] + (impulssi/ma) * n[0], v1[1] + (impulssi/ma) * n[1]]
+            v2l = [v2[0] + (impulssi/mb) * n[0], v2[1] + (impulssi/mb) * n[1]]
+            
+            angular_velocity_end1 = angular_velocity1 + (impulssi / ja) * (absrAPxn2[2])
+            angular_velocity_end2 = angular_velocity2 + (impulssi / jb) * (absrBPxn2[2])
+            
+            # Now calculate the changes to velocity
+            # Velocity for every coordinate of a moving object is the same
+            v1 = [v1[0] + v1[0] + a[0] * dt, v1l[1] + v1[1] + a[1] * dt, 0]
+            v2 = [v2[0] + v1[0] + a[0] * dt, v2l[1] + v2[1] + a[1] * dt, 0]
 
-            # Now calculate the "correct" normal of collided side
-            normal = find_collision_normal(side_coord1, side_coord2, cm_receiver, cm_causer)
-            print("Found normal", normal)
+            # Now calculate the changes to displacement
+            # Displacement change will affect all the coords equally
+            
+            #coordinates1, cm1 = kinematic_displacement(coordinates1, v1l, dt, cm1)
+            #coordinates2, cm2 = kinematic_displacement(coordinates2, v2l, dt, cm2)
 
-            # Determine new speed and angular speed
+            # Rotate objects. Rotation is scaled with time.
+            #coordinates1 = rotate_around_z(coordinates1, cm1, angular_velocity_end1 * dt)
+            #coordinates2 = rotate_around_z(coordinates2, cm2, angular_velocity_end2 * dt)
 
-            break
+            #time += dt
+            
+            print(impulssi)
+            print(angular_velocity_end1, angular_velocity_end2)
+            print(v1l, v2l)
+            print("Collision at time", time)
+            
+        
+        
+        
+        time += dt
 
     plt.axis('scaled')
     plt.show()
@@ -380,7 +486,7 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
 # test_collision()
 
 test_multiple(start_velocity1=15, velocity_angle_radians1=pi / 4,
-              start_velocity2=10, velocity_angle_radians2=2 * pi / 3,
-              angular_velocity1=pi / 2, angular_velocity2=1,
-              dt=0.001,
-              plot_interval=0.01)
+              start_velocity2=9.3, velocity_angle_radians2=2 * pi / 3,
+              angular_velocity1=pi/3, angular_velocity2=1,
+              dt=0.01,
+              plot_interval=0.0001)
