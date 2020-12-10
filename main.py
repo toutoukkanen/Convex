@@ -132,6 +132,7 @@ def find_collision_normal(point1, point2, collision_point, cm_causer):
     collision_point_to_cm_causer = cm_causer - collision_point
 
     # Check which normal has positive dot product with the collision point
+    # So which normal is the "right" one
     dotproduct1 = (collision_point_to_cm_causer[0] * normal1[0] +
                    collision_point_to_cm_causer[1] * normal1[1] +
                    collision_point_to_cm_causer[2] * normal1[2])
@@ -156,6 +157,7 @@ def find_nearest_side_to_point(coordinates, point, mark_points=False):
 
     last_coord = None
 
+    # Calculate distance from collision point to the nearest side
     for coord in coordinates:
         if last_coord is None:
             pass
@@ -187,6 +189,7 @@ def calculate_collision_effects(collision_point,
                                 angular_v1, angular_v2,
                                 j1, j2,
                                 m1, m2):
+
     unitNormal = normal / sqrt(normal[0] ** 2 + normal[1] ** 2)
 
     print("Unitnormal", unitNormal)
@@ -201,60 +204,32 @@ def calculate_collision_effects(collision_point,
 
     impulse = 0
 
-    simple_mode = True
-    if simple_mode:
-
-        numerator = vAB[0] * unitNormal[0] + vAB[1] * unitNormal[1] + vAB[2] * unitNormal[2]
-        # print("Numerator", numerator)
-
-        rAP_x_normal = vector_mult(rAP, normal)
-        rBP_x_normal = vector_mult(rBP, normal)
-        # print(rBP_x_normal, rAP_x_normal)
-
-        denominator = (1 / m1 + 1 / m2 + ((np.absolute(rAP_x_normal[2])) ** 2) / j1 +
-                       ((np.absolute(rBP_x_normal[2])) ** 2) / j2)
-
-        # print("Test", (np.absolute(rAP_x_normal[2])) ** 2)
-
-        # print("Denominator", denominator)
-
-        impulse = -(1 + 1) * numerator / denominator
-
-        print("Impulse", impulse)
-
     # Component way
-    else:
-        numerator = ((v1[0] - angular_v1[2] * rAP[1] - v2[0] + angular_v2[2] * rBP[1]) * unitNormal[0] +
-                     (v1[1] + angular_v1[2] * rAP[0] - v2[1] - angular_v2[2] * rBP[0]) * unitNormal[1])
 
-        # print("Numerator", numerator)
+    numerator = ((v1[0] - angular_v1[2] * rAP[1] - v2[0] + angular_v2[2] * rBP[1]) * unitNormal[0] +
+                 (v1[1] + angular_v1[2] * rAP[0] - v2[1] - angular_v2[2] * rBP[0]) * unitNormal[1])
 
-        denominator = (1 / m1 + 1 / m2 + ((rAP[0] * unitNormal[1] - rAP[1] * unitNormal[0]) ** 2) / j1 +
-                       ((rBP[0] * unitNormal[1] - rBP[1] * unitNormal[0]) ** 2) / j2)
+    denominator = (1 / m1 + 1 / m2 + ((rAP[0] * unitNormal[1] - rAP[1] * unitNormal[0]) ** 2) / j1 +
+                   ((rBP[0] * unitNormal[1] - rBP[1] * unitNormal[0]) ** 2) / j2)
 
-        # print("Test", (rAP[0] * unitNormal[1] - rAP[1] * unitNormal[0]) ** 2)
-
-        # print("Denominator", denominator)
-
-        impulse = -(1 + 1) * numerator / denominator
-
-        print("Impulse:", impulse)
+    impulse = -(1 + 1) * numerator / denominator
+    print("Impulse:", impulse)
 
     # Determine new velocity
 
     v1 = [v1[0] + impulse * unitNormal[0],
           v1[1] + impulse * unitNormal[1],
           0]
-    #
+
     v2 = [v2[0] - impulse * unitNormal[0],
           v2[1] - impulse * unitNormal[1],
           0]
-    #
-    # # Determine new angular speed
+
+    # Determine new angular speed
     angular_v1 = [0, 0,
                   angular_v1[2] + impulse / j1 * (rAP[0] * unitNormal[1] - rAP[1] * unitNormal[0])
                   ]
-    #
+
     angular_v2 = [0, 0,
                   angular_v1[2] - impulse / j2 * (rBP[0] * unitNormal[1] - rBP[1] * unitNormal[0])
                   ]
@@ -379,7 +354,8 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
                   m1=1, m2=1,
                   j1=0.01, j2=0.01,
                   dt=1.,
-                  plot_interval=0.1):
+                  plot_interval=0.1,
+                  run_time=1.):
     # A triangle
     coordinates1 = np.array([
         (1.5, 0, 0),
@@ -423,7 +399,7 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
     time = 0  # Passed time
 
     # Run for five seconds unless collision happened
-    while time < 1.5:
+    while time < run_time:
         # Now calculate the changes to velocity
         # Velocity for every coordinate of a moving object is the same
         v1 = [v1[0] + a[0] * dt, v1[1] + a[1] * dt, v1[2] + a[2] * dt]
@@ -470,7 +446,6 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
                                                                                        angular_velocity2,
                                                                                        j1, j2,
                                                                                        m1, m2)
-
     plt.axis('scaled')
     plt.show()
 
@@ -479,10 +454,11 @@ def test_multiple(start_velocity1=0., velocity_angle_radians1=0.,
 # test_kinematic(30, pi / 4)
 # test_collision()
 
-test_multiple(start_velocity1=15, velocity_angle_radians1=pi / 4,
-              start_velocity2=10, velocity_angle_radians2=2 * pi / 3,
-              angular_velocity1=pi / 2, angular_velocity2=1,
-              m1=1, m2=1,
+test_multiple(start_velocity1=14.3, velocity_angle_radians1=pi / 4,
+              start_velocity2=9, velocity_angle_radians2=2 * pi / 3,
+              angular_velocity1=pi, angular_velocity2=2 * pi,
+              m1=10, m2=1,
               j1=0.01, j2=0.01,
               dt=0.001,
-              plot_interval=0.001)
+              plot_interval=0.08,
+              run_time=1.5)
